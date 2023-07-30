@@ -1,0 +1,186 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      initialRoute: '/',
+      routes: {
+        '/': (context) => HomeScreen(),
+        '/welcome': (context) => WelcomeScreen(),
+      },
+    );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final List<String> items = [];
+
+  // Mendapatkan daftar item dari Strapi saat inisialisasi
+  @override
+  void initState() {
+    super.initState();
+    _getItems();
+  }
+
+  // Fungsi untuk mendapatkan daftar item dari Strapi
+  void _getItems() async {
+    final response = await http.get(
+      Uri.parse("https://api.example.com/items"), // Ganti dengan URL endpoint get items di Strapi
+    );
+
+    if (response.statusCode == 200) {
+      // Jika permintaan berhasil, ambil data daftar item dari response
+      List<dynamic> data = json.decode(response.body);
+      List<String> itemList = data.map((item) => item['title']).toList();
+
+      setState(() {
+        items.clear();
+        items.addAll(itemList);
+      });
+    } else {
+      // Jika ada kesalahan, tampilkan pesan kesalahan
+      print("Failed to get items: ${response.statusCode}");
+    }
+  }
+
+  // Fungsi untuk menambahkan item baru ke Strapi
+  void _createNewItem() async {
+    // Buat data item baru yang ingin Anda tambahkan
+    Map<String, dynamic> newItem = {
+      "title": "New Item",
+      "description": "This is a new item.",
+    };
+
+    final response = await http.post(
+      Uri.parse("https://api.example.com/items"), // Ganti dengan URL endpoint create item di Strapi
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(newItem),
+    );
+
+    if (response.statusCode == 200) {
+      // Jika item berhasil ditambahkan, muat ulang daftar item
+      _getItems();
+    } else {
+      // Jika ada kesalahan, tampilkan pesan kesalahan
+      print("Failed to create item: ${response.statusCode}");
+    }
+  }
+
+  // Fungsi untuk menghapus item dari Strapi berdasarkan indeks
+  void _deleteItem(int index) async {
+    // Ambil id item yang ingin Anda hapus, misalnya, id dari data yang ada di Strapi
+    String itemId = ""; // Ganti dengan id item yang sesuai dari data di Strapi
+
+    final response = await http.delete(
+      Uri.parse("https://api.example.com/items/$itemId"), // Ganti dengan URL endpoint delete item di Strapi
+    );
+
+    if (response.statusCode == 200) {
+      // Jika item berhasil dihapus, muat ulang daftar item
+      _getItems();
+    } else {
+      // Jika ada kesalahan, tampilkan pesan kesalahan
+      print("Failed to delete item: ${response.statusCode}");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Home Screen'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.network(
+              'https://example.com/path-to-your-image.png',
+              width: 150,
+              height: 150,
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/welcome');
+              },
+              child: Text('Go to Welcome Screen'),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _createNewItem,
+              child: Text('Create New Item'),
+            ),
+            SizedBox(height: 20),
+            Expanded(
+              child: ListView.builder(
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(items[index]),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Selected Item'),
+                          content: Text('You tapped on: ${items[index]}'),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: Text('Close'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                _deleteItem(index);
+                                Navigator.pop(context);
+                              },
+                              child: Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class WelcomeScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Welcome Screen'),
+      ),
+      body: Center(
+        child: Text(
+          'Welcome to Flutter!',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+}
